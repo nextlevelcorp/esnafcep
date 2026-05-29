@@ -70,4 +70,23 @@ class SalesNotifier extends StateNotifier<List<Sale>> {
       'toplam': nakit + kart + veresiye,
     };
   }
+
+  /// Returns daily totals for the last [days] days (today included), oldest first.
+  List<DayTotal> getDailyTotals(int days) {
+    final now = DateTime.now();
+    return List.generate(days, (i) {
+      final day = now.subtract(Duration(days: days - 1 - i));
+      final start = DateTime(day.year, day.month, day.day);
+      final end = start.add(const Duration(days: 1));
+      final sales = _repo.getSalesByDateRange(start, end);
+      final total = sales.fold(0.0, (s, e) => s + e.amount);
+      return DayTotal(date: start, total: total);
+    });
+  }
+}
+
+class DayTotal {
+  final DateTime date;
+  final double total;
+  const DayTotal({required this.date, required this.total});
 }
