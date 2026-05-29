@@ -5,11 +5,12 @@ class AppColors {
   static const primaryLight = Color(0xFF1D9E75);
   static const primaryDark = Color(0xFF085041);
   static const success = Color(0xFF1D9E75);
-  static const error = Color(0xFFD85A30);
+  static const error = Color(0xFFE05C3A);
   static const warning = Color(0xFFBA7517);
   static const textPrimary = Color(0xFF1a1714);
-  static const textSecondary = Color(0xFF7a7267);
-  static const border = Color(0xFFd9d3c8);
-  static const background = Color(0xFFf5f2eb);
-  static const surface = Color(0xFFede8df);
+  static const textSecondary = Color(0xFF8a8278);
+  static const border = Color(0xFFe8e2d9);
+  static const background = Color(0xFFF7F4EF);
+  static const surface = Color(0xFFEDE8DF);
+  static const cardBg = Color(0xFFFFFFFF);
 }

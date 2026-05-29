@@ -30,7 +30,7 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
 
-  final _screens = const [
+  static const _screens = [
     HomeScreen(),
     VeresiyeScreen(),
     ReportsScreen(),
@@ -44,33 +44,40 @@ class _MainNavigationState extends State<MainNavigation> {
         index: _currentIndex,
         children: _screens,
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        backgroundColor: Colors.white,
-        indicatorColor: AppColors.primary.withOpacity(0.15),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home, color: AppColors.primary),
-            label: 'Kasa',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people, color: AppColors.primary),
-            label: 'Veresiye',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart, color: AppColors.primary),
-            label: 'Raporlar',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings, color: AppColors.primary),
-            label: 'Ayarlar',
-          ),
-        ],
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: AppColors.border)),
+        ),
+        child: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (i) => setState(() => _currentIndex = i),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          height: 64,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded),
+              label: 'Kasa',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.people_outline_rounded),
+              selectedIcon: Icon(Icons.people_rounded),
+              label: 'Veresiye',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.bar_chart_outlined),
+              selectedIcon: Icon(Icons.bar_chart_rounded),
+              label: 'Raporlar',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings_rounded),
+              label: 'Ayarlar',
+            ),
+          ],
+        ),
       ),
     );
   }

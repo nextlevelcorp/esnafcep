@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../providers/customer_provider.dart';
-import '../../widgets/big_button.dart';
 import '../../widgets/customer_list_tile.dart';
 import 'customer_detail_screen.dart';
 import 'widgets/add_customer_dialog.dart';
@@ -32,82 +31,150 @@ class _VeresiyeScreenState extends ConsumerState<VeresiyeScreen> {
         c.name.toLowerCase().contains(_query.toLowerCase()) ||
         (c.phone ?? '').contains(_query)).toList();
     final totalDebt = customers.fold(0.0, (sum, c) => sum + c.totalDebt);
+    final debtorCount = customers.where((c) => c.totalDebt > 0).length;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Veresiye', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Veresiye'),
+        actions: [
+          IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.person_add_rounded, color: Colors.white, size: 18),
+            ),
+            onPressed: () => showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => AddCustomerDialog(ref: ref),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Column(
-              children: [
-                if (totalDebt > 0)
+          // Summary banner
+          if (totalDebt > 0)
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.error.withOpacity(0.9), AppColors.error],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
                   Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    margin: const EdgeInsets.only(bottom: 12),
+                    width: 42, height: 42,
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
+                      color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.error.withOpacity(0.3)),
                     ),
-                    child: Row(
+                    child: const Icon(Icons.account_balance_wallet_rounded, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.warning_amber, color: AppColors.error, size: 20),
-                        const SizedBox(width: 8),
                         Text(
-                          'Toplam alacak: ${CurrencyFormatter.format(totalDebt)}',
-                          style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w600),
+                          CurrencyFormatter.format(totalDebt),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        Text(
+                          '$debtorCount müşteride toplam alacak',
+                          style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12),
                         ),
                       ],
                     ),
                   ),
-                TextField(
-                  controller: _searchCtrl,
-                  onChanged: (v) => setState(() => _query = v),
-                  decoration: InputDecoration(
-                    hintText: 'Müşteri ara...',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _query.isNotEmpty
-                        ? IconButton(icon: const Icon(Icons.clear), onPressed: () {
-                            _searchCtrl.clear();
-                            setState(() => _query = '');
-                          })
-                        : null,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          // Search
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: BigButton(
-              label: '+ YENİ MÜŞTERİ',
-              icon: Icons.person_add,
-              onPressed: () => showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (_) => AddCustomerDialog(ref: ref),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: (v) => setState(() => _query = v),
+              decoration: InputDecoration(
+                hintText: 'Müşteri ara...',
+                hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                prefixIcon: const Icon(Icons.search_rounded, color: AppColors.textSecondary, size: 20),
+                suffixIcon: _query.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded, size: 18),
+                        onPressed: () { _searchCtrl.clear(); setState(() => _query = ''); },
+                      )
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
             ),
           ),
-          const SizedBox(height: 12),
           Expanded(
             child: filtered.isEmpty
-                ? const Center(child: Text('Müşteri bulunamadı', style: TextStyle(color: AppColors.textSecondary)))
+                ? _EmptyState(hasCustomers: customers.isNotEmpty)
                 : ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 32),
                     itemCount: filtered.length,
                     itemBuilder: (_, i) => CustomerListTile(
                       customer: filtered[i],
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => CustomerDetailScreen(customerId: filtered[i].id)),
+                        MaterialPageRoute(
+                          builder: (_) => CustomerDetailScreen(customerId: filtered[i].id),
+                        ),
                       ),
                     ),
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final bool hasCustomers;
+  const _EmptyState({required this.hasCustomers});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 72, height: 72,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(Icons.people_outline_rounded, size: 36, color: AppColors.primary),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            hasCustomers ? 'Sonuç bulunamadı' : 'Henüz müşteri yok',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            hasCustomers ? 'Farklı bir isim dene' : 'Sağ üstteki + butonuna bas',
+            style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
           ),
         ],
       ),

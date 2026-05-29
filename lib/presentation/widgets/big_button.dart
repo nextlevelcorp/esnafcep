@@ -7,6 +7,7 @@ class BigButton extends StatelessWidget {
   final bool isPrimary;
   final Color? color;
   final IconData? icon;
+  final double height;
 
   const BigButton({
     super.key,
@@ -15,25 +16,28 @@ class BigButton extends StatelessWidget {
     this.isPrimary = true,
     this.color,
     this.icon,
+    this.height = 56,
   });
 
   @override
   Widget build(BuildContext context) {
     final bg = color ?? (isPrimary ? AppColors.primary : Colors.white);
-    final fg = isPrimary ? Colors.white : AppColors.primary;
+    final fg = (color != null || isPrimary) ? Colors.white : AppColors.primary;
+
     return SizedBox(
-      height: 64,
+      height: height,
       width: double.infinity,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: bg,
           foregroundColor: fg,
+          disabledBackgroundColor: AppColors.border,
+          disabledForegroundColor: AppColors.textSecondary,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(
-              color: isPrimary ? Colors.transparent : AppColors.border,
-              width: 2,
-            ),
+            borderRadius: BorderRadius.circular(14),
+            side: (!isPrimary && color == null)
+                ? const BorderSide(color: AppColors.border, width: 1.5)
+                : BorderSide.none,
           ),
           elevation: 0,
         ),
@@ -42,12 +46,16 @@ class BigButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 22),
+              Icon(icon, size: 20),
               const SizedBox(width: 8),
             ],
             Text(
               label,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.2,
+              ),
             ),
           ],
         ),
