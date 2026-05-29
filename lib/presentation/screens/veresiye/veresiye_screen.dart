@@ -14,9 +14,12 @@ class VeresiyeScreen extends ConsumerStatefulWidget {
   ConsumerState<VeresiyeScreen> createState() => _VeresiyeScreenState();
 }
 
+enum _SortBy { nameAsc, debtDesc, dateDesc }
+
 class _VeresiyeScreenState extends ConsumerState<VeresiyeScreen> {
   final _searchCtrl = TextEditingController();
   String _query = '';
+  _SortBy _sortBy = _SortBy.debtDesc;
 
   Future<bool> _confirmDelete(BuildContext context, String name) async {
     return await showDialog<bool>(
@@ -48,7 +51,12 @@ class _VeresiyeScreenState extends ConsumerState<VeresiyeScreen> {
     final customers = ref.watch(customersProvider);
     final filtered = customers.where((c) =>
         c.name.toLowerCase().contains(_query.toLowerCase()) ||
-        (c.phone ?? '').contains(_query)).toList();
+        (c.phone ?? '').contains(_query)).toList()
+      ..sort((a, b) => switch (_sortBy) {
+        _SortBy.nameAsc => a.name.compareTo(b.name),
+        _SortBy.debtDesc => b.totalDebt.compareTo(a.totalDebt),
+        _SortBy.dateDesc => b.createdAt.compareTo(a.createdAt),
+      });
     final totalDebt = customers.fold(0.0, (sum, c) => sum + c.totalDebt);
     final debtorCount = customers.where((c) => c.totalDebt > 0).length;
 
@@ -57,6 +65,17 @@ class _VeresiyeScreenState extends ConsumerState<VeresiyeScreen> {
       appBar: AppBar(
         title: const Text('Veresiye'),
         actions: [
+          PopupMenuButton<_SortBy>(
+            icon: const Icon(Icons.sort_rounded),
+            tooltip: 'Sırala',
+            initialValue: _sortBy,
+            onSelected: (v) => setState(() => _sortBy = v),
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: _SortBy.debtDesc, child: Text('En yüksek borç')),
+              const PopupMenuItem(value: _SortBy.nameAsc, child: Text('İsme göre (A-Z)')),
+              const PopupMenuItem(value: _SortBy.dateDesc, child: Text('En son eklenen')),
+            ],
+          ),
           IconButton(
             icon: Container(
               padding: const EdgeInsets.all(6),

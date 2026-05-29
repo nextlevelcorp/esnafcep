@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../data/local/hive_service.dart';
 import '../../../data/models/sale.dart';
 import '../../../data/models/payment.dart';
 import '../../../providers/customer_provider.dart';
@@ -11,6 +12,7 @@ import '../../../providers/sale_provider.dart';
 import '../../widgets/big_button.dart';
 import 'widgets/payment_dialog.dart';
 import 'widgets/add_sale_for_customer_dialog.dart';
+import 'widgets/edit_customer_dialog.dart';
 
 class CustomerDetailScreen extends ConsumerWidget {
   final String customerId;
@@ -45,6 +47,15 @@ class CustomerDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(customer.name),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_rounded),
+            tooltip: 'Düzenle',
+            onPressed: () => showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => EditCustomerDialog(ref: ref, customer: customer),
+            ),
+          ),
           if (customer.phone != null)
             IconButton(
               icon: const Icon(Icons.phone_rounded),
@@ -125,8 +136,12 @@ class CustomerDetailScreen extends ConsumerWidget {
         .replaceAll(' ', '')
         .replaceAll('-', '')
         .replaceFirst(RegExp(r'^0'), '+90');
+    final businessName = HiveService.settingsBox.get('businessName', defaultValue: '') as String;
+    final senderLine = businessName.isNotEmpty ? '\n_$businessName_' : '\n_EsnafCep_';
     final msg = Uri.encodeComponent(
-      '*VERESİYE MAKBUZU*\n\nMüşteri: $name\nToplam Borç: ${CurrencyFormatter.format(debt)}\n\n_EsnafCep ile oluşturuldu_',
+      'Merhaba $name 👋\n\n'
+      'Toplam borcunuz: *${CurrencyFormatter.format(debt)}*\n\n'
+      'Ödeme yaptıysanız lütfen bildiriniz.$senderLine',
     );
     launchUrl(
       Uri.parse('https://wa.me/$formatted?text=$msg'),
