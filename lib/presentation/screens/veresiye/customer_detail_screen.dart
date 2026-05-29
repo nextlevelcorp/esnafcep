@@ -18,29 +18,39 @@ class CustomerDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(customersProvider);
-    ref.watch(salesProvider);
-    final customer = ref.read(customersProvider.notifier).getCustomer(customerId);
-    if (customer == null) return const Scaffold(body: Center(child: Text('Müşteri bulunamadı')));
+    // Watch both providers so screen rebuilds on any change
+    final allCustomers = ref.watch(customersProvider);
+    final allSales = ref.watch(salesProvider);
 
-    final payments = ref.read(customersProvider.notifier).getPayments(customerId);
-    final allSales = ref.read(saleRepositoryProvider).getSalesByCustomer(customerId);
+    final customer = allCustomers.firstWhere(
+      (c) => c.id == customerId,
+      orElse: () => allCustomers.isEmpty ? throw Exception() : allCustomers.first,
+    );
 
-    // Merge sales and payments into timeline
-    final events = <_Event>[];
-    for (final s in allSales) events.add(_Event(type: 'sale', timestamp: s.timestamp, amount: s.amount, sale: s));
-    for (final p in payments) events.add(_Event(type: 'payment', timestamp: p.timestamp, amount: p.amount, payment: p));
-    events.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    // Build timeline: veresiye sales + payments for this customer
+    final customerSales = allSales
+        .where((s) => s.customerId == customerId && s.paymentType == 'veresiye')
+        .toList();
+    final payments = ref.read(customerRepositoryProvider).getPaymentsByCustomer(customerId);
+
+    final events = <_Event>[
+      for (final s in customerSales)
+        _Event(type: 'sale', timestamp: s.timestamp, amount: s.amount, note: s.note),
+      for (final p in payments)
+        _Event(type: 'payment', timestamp: p.timestamp, amount: p.amount, note: p.note),
+    ]..sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(customer.name),
         actions: [
           if (customer.phone != null)
             IconButton(
-              icon: const Icon(Icons.phone),
+              icon: const Icon(Icons.phone_rounded),
               onPressed: () => launchUrl(Uri.parse('tel:${customer.phone}')),
             ),
+          const SizedBox(width: 4),
         ],
       ),
       body: SingleChildScrollView(
@@ -48,95 +58,222 @@ class CustomerDetailScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (customer.phone != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(customer.phone!, style: const TextStyle(color: AppColors.textSecondary, fontSize: 15)),
-              ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: customer.totalDebt > 0 ? AppColors.error : AppColors.success,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Toplam Borç', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                  Text(
-                    CurrencyFormatter.format(customer.totalDebt),
-                    style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            BigButton(
-              label: 'ÖDEME AL',
-              icon: Icons.payments,
-              onPressed: customer.totalDebt > 0
-                  ? () => showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (_) => PaymentDialog(ref: ref, customer: customer),
-                    )
+            // Debt card
+            _DebtCard(
+              customer: customer,
+              onPay: () => _showPayment(context, ref, customer.id),
+              onAddDebt: () => _showAddSale(context, ref, customer.id),
+              onWhatsApp: customer.phone != null
+                  ? () => _sendWhatsApp(customer.name, customer.phone!, customer.totalDebt)
                   : null,
             ),
-            const SizedBox(height: 8),
-            BigButton(
-              label: 'VERESİYE EKLE',
-              icon: Icons.add_shopping_cart,
-              isPrimary: false,
-              onPressed: () => showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (_) => AddSaleForCustomerDialog(ref: ref, customer: customer),
-              ),
-            ),
-            const SizedBox(height: 8),
-            BigButton(
-              label: 'WHATSAPP GÖNDER',
-              icon: Icons.message,
-              isPrimary: false,
-              color: const Color(0xFF25D366),
-              onPressed: customer.phone != null ? () => _sendWhatsApp(customer.name, customer.phone!, customer.totalDebt) : null,
-            ),
             const SizedBox(height: 24),
-            const Text('İşlem Geçmişi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
+            // Timeline header
+            Row(
+              children: [
+                const Text(
+                  'İşlem Geçmişi',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                ),
+                const SizedBox(width: 8),
+                if (events.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${events.length}',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
             if (events.isEmpty)
-              const Center(child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('Henüz işlem yok', style: TextStyle(color: AppColors.textSecondary)),
-              ))
+              _EmptyTimeline()
             else
-              ...events.map((e) => _EventTile(event: e)),
+              ...events.map((e) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _EventTile(event: e),
+              )),
           ],
         ),
       ),
     );
   }
 
+  void _showPayment(BuildContext context, WidgetRef ref, String id) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => PaymentDialog(ref: ref, customerId: id),
+    );
+  }
+
+  void _showAddSale(BuildContext context, WidgetRef ref, String id) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => AddSaleForCustomerDialog(ref: ref, customerId: id),
+    );
+  }
+
   void _sendWhatsApp(String name, String phone, double debt) {
-    final formatted = phone.replaceAll(' ', '').replaceAll('-', '')
+    final formatted = phone
+        .replaceAll(' ', '')
+        .replaceAll('-', '')
         .replaceFirst(RegExp(r'^0'), '+90');
     final msg = Uri.encodeComponent(
-      '*VERESIYE MAKBUZU*\n\nMüşteri: $name\nToplam Borç: ${CurrencyFormatter.format(debt)}\n\nEsnafCep ile oluşturuldu',
+      '*VERESİYE MAKBUZU*\n\nMüşteri: $name\nToplam Borç: ${CurrencyFormatter.format(debt)}\n\n_EsnafCep ile oluşturuldu_',
     );
-    launchUrl(Uri.parse('https://wa.me/$formatted?text=$msg'), mode: LaunchMode.externalApplication);
+    launchUrl(
+      Uri.parse('https://wa.me/$formatted?text=$msg'),
+      mode: LaunchMode.externalApplication,
+    );
   }
 }
+
+// ─── Debt Card ────────────────────────────────────────────────────────────────
+
+class _DebtCard extends StatelessWidget {
+  final dynamic customer;
+  final VoidCallback onPay;
+  final VoidCallback onAddDebt;
+  final VoidCallback? onWhatsApp;
+
+  const _DebtCard({
+    required this.customer,
+    required this.onPay,
+    required this.onAddDebt,
+    this.onWhatsApp,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasDebt = customer.totalDebt > 0;
+    return Column(
+      children: [
+        // Amount card
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: hasDebt
+                  ? [const Color(0xFFE05C3A), const Color(0xFFFF7B5A)]
+                  : [const Color(0xFF0F6E56), const Color(0xFF1D9E75)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: (hasDebt ? AppColors.error : AppColors.primary).withOpacity(0.3),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      hasDebt ? Icons.account_balance_wallet_rounded : Icons.check_circle_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        customer.name,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
+                      ),
+                      if (customer.phone != null)
+                        Text(
+                          customer.phone,
+                          style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 12),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                hasDebt ? 'Toplam Borç' : 'Borç Yok',
+                style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                CurrencyFormatter.format(customer.totalDebt),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 38,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1,
+                  height: 1.1,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Action buttons
+        Row(
+          children: [
+            Expanded(
+              child: BigButton(
+                label: 'Veresiye Ekle',
+                icon: Icons.add_rounded,
+                isPrimary: false,
+                onPressed: onAddDebt,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: BigButton(
+                label: 'Ödeme Al',
+                icon: Icons.payments_rounded,
+                color: hasDebt ? AppColors.success : null,
+                onPressed: hasDebt ? onPay : null,
+              ),
+            ),
+          ],
+        ),
+        if (onWhatsApp != null) ...[
+          const SizedBox(height: 8),
+          BigButton(
+            label: 'WhatsApp\'a Gönder',
+            icon: Icons.message_rounded,
+            color: const Color(0xFF25D366),
+            onPressed: onWhatsApp,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ─── Timeline ─────────────────────────────────────────────────────────────────
 
 class _Event {
   final String type;
   final DateTime timestamp;
   final double amount;
-  final Sale? sale;
-  final Payment? payment;
-  _Event({required this.type, required this.timestamp, required this.amount, this.sale, this.payment});
+  final String? note;
+  _Event({required this.type, required this.timestamp, required this.amount, this.note});
 }
 
 class _EventTile extends StatelessWidget {
@@ -146,48 +283,74 @@ class _EventTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPayment = event.type == 'payment';
+    final color = isPayment ? AppColors.success : AppColors.error;
+    final icon = isPayment ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded;
+    final label = isPayment ? 'Ödeme' : 'Veresiye';
+    final sign = isPayment ? '-' : '+';
+
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
           Container(
-            width: 36, height: 36,
+            width: 40, height: 40,
             decoration: BoxDecoration(
-              color: (isPayment ? AppColors.success : AppColors.error).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              isPayment ? Icons.arrow_downward : Icons.arrow_upward,
-              color: isPayment ? AppColors.success : AppColors.error,
-              size: 18,
-            ),
+            child: Icon(icon, color: color, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              isPayment ? 'Ödeme' : 'Veresiye',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                if (event.note != null && event.note!.isNotEmpty)
+                  Text(event.note!, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+              ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${isPayment ? "-" : "+"}${CurrencyFormatter.format(event.amount)}',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: isPayment ? AppColors.success : AppColors.error,
-                ),
+                '$sign${CurrencyFormatter.format(event.amount)}',
+                style: TextStyle(fontWeight: FontWeight.w800, color: color, fontSize: 15),
               ),
-              Text(DateFormatter.formatRelative(event.timestamp), style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              Text(
+                DateFormatter.formatRelative(event.timestamp),
+                style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+              ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyTimeline extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.receipt_long_outlined, size: 36, color: AppColors.border),
+          SizedBox(height: 8),
+          Text('Henüz işlem yok', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
         ],
       ),
     );
