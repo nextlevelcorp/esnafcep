@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_colors.dart';
+import 'data/local/hive_service.dart';
 import 'presentation/screens/home/home_screen.dart';
 import 'presentation/screens/veresiye/veresiye_screen.dart';
 import 'presentation/screens/reports/reports_screen.dart';
 import 'presentation/screens/settings/settings_screen.dart';
+import 'presentation/screens/onboarding/onboarding_screen.dart';
 
 class EsnafCepApp extends StatelessWidget {
   const EsnafCepApp({super.key});
@@ -15,8 +17,35 @@ class EsnafCepApp extends StatelessWidget {
       title: 'EsnafCep',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const MainNavigation(),
+      home: const _RootRouter(),
     );
+  }
+}
+
+class _RootRouter extends StatefulWidget {
+  const _RootRouter();
+
+  @override
+  State<_RootRouter> createState() => _RootRouterState();
+}
+
+class _RootRouterState extends State<_RootRouter> {
+  late bool _onboardingDone;
+
+  @override
+  void initState() {
+    super.initState();
+    _onboardingDone = HiveService.settingsBox.get('onboardingDone', defaultValue: false) as bool;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_onboardingDone) {
+      return OnboardingScreen(
+        onDone: () => setState(() => _onboardingDone = true),
+      );
+    }
+    return const MainNavigation();
   }
 }
 

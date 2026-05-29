@@ -155,6 +155,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 24),
+            const _SectionLabel(text: 'Geliştirici'),
+            const SizedBox(height: 12),
+            _SettingsCard(
+              child: _TapRow(
+                icon: Icons.replay_rounded,
+                label: 'Karşılama Ekranını Göster',
+                color: AppColors.warning,
+                onTap: () {
+                  HiveService.settingsBox.put('onboardingDone', false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Uygulamayı kapatıp açın'),
+                      backgroundColor: AppColors.warning,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      margin: const EdgeInsets.all(16),
+                    ),
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -206,6 +228,34 @@ class _FieldRow extends StatelessWidget {
           ),
           Expanded(child: child),
         ],
+      ),
+    );
+  }
+}
+
+class _TapRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  const _TapRow({required this.icon, required this.label, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 12),
+            Text(label, style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.w600)),
+            const Spacer(),
+            Icon(Icons.chevron_right_rounded, size: 18, color: color.withOpacity(0.5)),
+          ],
+        ),
       ),
     );
   }
