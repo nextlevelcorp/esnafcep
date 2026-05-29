@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/currency_formatter.dart';
 import '../../../../providers/sale_provider.dart';
 import '../../../../providers/customer_provider.dart';
+import '../../../../providers/product_provider.dart';
 import '../../../../data/models/customer.dart';
 import '../../../widgets/numpad.dart';
 
@@ -60,9 +62,14 @@ class _NewSaleDialogState extends State<NewSaleDialog> {
     return true;
   }
 
+  void _setAmount(double v) {
+    setState(() => _amount = v == v.truncate() ? v.toStringAsFixed(0) : v.toString());
+  }
+
   @override
   Widget build(BuildContext context) {
     final customers = widget.ref.watch(customersProvider);
+    final products = widget.ref.watch(productsProvider);
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -135,6 +142,48 @@ class _NewSaleDialogState extends State<NewSaleDialog> {
                     child: Text(c.name),
                   )).toList(),
                   onChanged: (c) => setState(() => _selectedCustomer = c),
+                ),
+              ),
+            ],
+            // Quick products
+            if (products.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              SizedBox(
+                height: 38,
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: products.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (_, i) {
+                    final p = products[i];
+                    return GestureDetector(
+                      onTap: () => _setAmount(p.price),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(p.emoji, style: const TextStyle(fontSize: 14)),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${p.name}  ${CurrencyFormatter.format(p.price)}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],

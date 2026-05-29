@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/local/hive_service.dart';
+import 'widgets/products_section.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _nameCtrl = TextEditingController();
   final _businessCtrl = TextEditingController();
 
@@ -141,6 +143,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: const Text('KAYDET', style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.5)),
               ),
             ),
+            const SizedBox(height: 24),
+            const ProductsSection(),
             const SizedBox(height: 24),
             const _SectionLabel(text: 'Uygulama Hakkında'),
             const SizedBox(height: 12),

@@ -3,6 +3,7 @@ import '../models/sale.dart';
 import '../models/customer.dart';
 import '../models/expense.dart';
 import '../models/payment.dart';
+import '../models/product.dart';
 import '../../core/constants/app_constants.dart';
 
 class HiveService {
@@ -12,10 +13,12 @@ class HiveService {
     Hive.registerAdapter(CustomerAdapter());
     Hive.registerAdapter(ExpenseAdapter());
     Hive.registerAdapter(PaymentAdapter());
+    Hive.registerAdapter(ProductAdapter());
     await Hive.openBox<Sale>(AppConstants.salesBox);
     await Hive.openBox<Customer>(AppConstants.customersBox);
     await Hive.openBox<Expense>(AppConstants.expensesBox);
     await Hive.openBox<Payment>(AppConstants.paymentsBox);
+    await Hive.openBox<Product>(AppConstants.productsBox);
     await Hive.openBox(AppConstants.settingsBox);
   }
 
@@ -23,5 +26,6 @@ class HiveService {
   static Box<Customer> get customersBox => Hive.box<Customer>(AppConstants.customersBox);
   static Box<Expense> get expensesBox => Hive.box<Expense>(AppConstants.expensesBox);
   static Box<Payment> get paymentsBox => Hive.box<Payment>(AppConstants.paymentsBox);
+  static Box<Product> get productsBox => Hive.box<Product>(AppConstants.productsBox);
   static Box get settingsBox => Hive.box(AppConstants.settingsBox);
 }
