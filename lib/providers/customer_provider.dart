@@ -32,6 +32,11 @@ class CustomersNotifier extends StateNotifier<List<Customer>> {
     state = _repo.getAllCustomers();
   }
 
+  void deleteCustomer(String id) {
+    _repo.deleteCustomer(id);
+    state = _repo.getAllCustomers();
+  }
+
   void addDebt(String customerId, double amount) {
     final customer = _repo.getCustomer(customerId);
     if (customer == null) return;

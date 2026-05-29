@@ -18,6 +18,25 @@ class _VeresiyeScreenState extends ConsumerState<VeresiyeScreen> {
   final _searchCtrl = TextEditingController();
   String _query = '';
 
+  Future<bool> _confirmDelete(BuildContext context, String name) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Müşteriyi Sil', style: TextStyle(fontWeight: FontWeight.w800)),
+        content: Text('"$name" ve tüm işlem geçmişi silinecek.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('İptal')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, elevation: 0),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sil'),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
   @override
   void dispose() {
     _searchCtrl.dispose();
@@ -131,15 +150,34 @@ class _VeresiyeScreenState extends ConsumerState<VeresiyeScreen> {
                 : ListView.builder(
                     padding: const EdgeInsets.only(bottom: 32),
                     itemCount: filtered.length,
-                    itemBuilder: (_, i) => CustomerListTile(
-                      customer: filtered[i],
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CustomerDetailScreen(customerId: filtered[i].id),
+                    itemBuilder: (_, i) {
+                      final c = filtered[i];
+                      return Dismissible(
+                        key: Key(c.id),
+                        direction: DismissDirection.endToStart,
+                        confirmDismiss: (_) => _confirmDelete(context, c.name),
+                        onDismissed: (_) => ref.read(customersProvider.notifier).deleteCustomer(c.id),
+                        background: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 24),
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
                         ),
-                      ),
-                    ),
+                        child: CustomerListTile(
+                          customer: c,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => CustomerDetailScreen(customerId: c.id),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
           ),
         ],

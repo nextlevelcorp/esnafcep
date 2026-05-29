@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../providers/sale_provider.dart';
 import '../../../../providers/customer_provider.dart';
 import '../../../../data/models/customer.dart';
+import '../../../widgets/numpad.dart';
 
 class NewSaleDialog extends StatefulWidget {
   final WidgetRef ref;
@@ -141,7 +142,7 @@ class _NewSaleDialogState extends State<NewSaleDialog> {
             // Numpad
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _Numpad(onTap: _onNumpad),
+              child: AppNumpad(onTap: _onNumpad),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),

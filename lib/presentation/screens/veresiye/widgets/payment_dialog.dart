@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../providers/customer_provider.dart';
+import '../../../widgets/numpad.dart';
 
 class PaymentDialog extends StatefulWidget {
   final WidgetRef ref;
@@ -145,7 +146,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
             // Numpad
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _Numpad(onTap: _onNumpad),
+              child: AppNumpad(onTap: _onNumpad),
             ),
             // Note
             Padding(
