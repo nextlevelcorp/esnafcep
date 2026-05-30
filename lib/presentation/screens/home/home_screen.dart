@@ -12,6 +12,7 @@ import '../../../providers/sale_provider.dart';
 import '../../../providers/customer_provider.dart';
 import '../../../providers/expense_provider.dart';
 import '../../widgets/big_button.dart';
+import '../sales_history/sales_history_screen.dart';
 import 'widgets/new_sale_dialog.dart';
 import 'widgets/cash_adjust_dialog.dart';
 
@@ -146,6 +147,16 @@ class _AppBar extends StatelessWidget {
       ),
       title: const Text('EsnafCep'),
       titleSpacing: 16,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.history_rounded),
+          tooltip: 'Satış Geçmişi',
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SalesHistoryScreen()),
+          ),
+        ),
+      ],
     );
   }
 }
