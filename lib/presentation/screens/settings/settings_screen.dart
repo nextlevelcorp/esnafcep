@@ -15,6 +15,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _nameCtrl = TextEditingController();
   final _businessCtrl = TextEditingController();
+  final _targetCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -22,12 +23,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final box = HiveService.settingsBox;
     _nameCtrl.text = box.get('ownerName', defaultValue: '');
     _businessCtrl.text = box.get('businessName', defaultValue: '');
+    final target = box.get('dailyTarget', defaultValue: 0.0) as double;
+    _targetCtrl.text = target > 0 ? target.toStringAsFixed(0) : '';
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _businessCtrl.dispose();
+    _targetCtrl.dispose();
     super.dispose();
   }
 
@@ -35,6 +39,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final box = HiveService.settingsBox;
     box.put('ownerName', _nameCtrl.text.trim());
     box.put('businessName', _businessCtrl.text.trim());
+    final target = double.tryParse(_targetCtrl.text.trim()) ?? 0.0;
+    box.put('dailyTarget', target);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Kaydedildi'),
@@ -123,6 +129,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                       decoration: const InputDecoration(
                         hintText: 'Yılmaz Bakkal',
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                        isDense: true,
+                        filled: false,
+                      ),
+                    ),
+                  ),
+                  const Divider(),
+                  _FieldRow(
+                    icon: Icons.track_changes_rounded,
+                    label: 'Günlük Hedef',
+                    child: TextField(
+                      controller: _targetCtrl,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                      decoration: const InputDecoration(
+                        hintText: '5000 ₺',
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
