@@ -1,0 +1,9 @@
+{
+  "name": "EsnafCep",
+  "short_name": "EsnafCep",
+  "start_url": "/esnafcep/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4F46E5",
+  "description": "Kasa & Veresiye Takip"
+}
