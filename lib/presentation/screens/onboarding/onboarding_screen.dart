@@ -21,7 +21,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       emoji: '👋',
       title: 'EsnafCep\'e\nHoş Geldiniz',
       subtitle: 'Kasa takibi ve veresiye yönetimini\nkolaylaştırmak için buradayız.',
-      color: Color(0xFF0F6E56),
+      color: AppColors.primary,
     ),
     _OnboardPage(
       emoji: '💰',
