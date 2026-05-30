@@ -3,9 +3,20 @@ class DateFormatter {
     '', 'Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz',
     'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'
   ];
+  static const _fullMonths = [
+    '', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+  ];
 
   static String formatDate(DateTime dt) =>
       '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
+
+  /// Alias for formatDate, used in share/export contexts.
+  static String format(DateTime dt) => formatDate(dt);
+
+  /// Short format: "15 Oca 14:30"
+  static String formatShort(DateTime dt) =>
+      '${dt.day} ${_months[dt.month]} ${formatTime(dt)}';
 
   static String formatDateTime(DateTime dt) =>
       '${formatDate(dt)} ${formatTime(dt)}';

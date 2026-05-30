@@ -13,24 +13,35 @@ import '../../widgets/big_button.dart';
 import 'widgets/new_sale_dialog.dart';
 import 'widgets/cash_adjust_dialog.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  String? _filterType; // null = all, 'nakit', 'kart', 'veresiye'
+
+  @override
+  Widget build(BuildContext context) {
     final salesNotifier = ref.watch(salesProvider.notifier);
     final expensesNotifier = ref.watch(expensesProvider.notifier);
     final customers = ref.watch(customersProvider);
     final stats = salesNotifier.todayStats;
-    final todaySales = salesNotifier.todaySales;
+    final allTodaySales = salesNotifier.todaySales;
     final todayExpenses = expensesNotifier.todayTotal;
+
+    final todaySales = _filterType == null
+        ? allTodaySales
+        : allTodaySales.where((s) => s.paymentType == _filterType).toList();
 
     // Customers with debt overdue > 30 days
     final now = DateTime.now();
     final criticalDebtors = customers.where((c) {
       if (c.totalDebt <= 0) return false;
-      final ref = c.lastDebtAt ?? c.createdAt;
-      return now.difference(ref).inDays > 30;
+      final refDate = c.lastDebtAt ?? c.createdAt;
+      return now.difference(refDate).inDays > 30;
     }).toList()
       ..sort((a, b) => b.totalDebt.compareTo(a.totalDebt));
 
@@ -52,7 +63,9 @@ class HomeScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                   _SectionHeader(
                     title: 'Bugünkü Satışlar',
-                    count: todaySales.length,
+                    count: allTodaySales.length,
+                    filterType: _filterType,
+                    onFilterChange: (t) => setState(() => _filterType = t),
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -428,39 +441,100 @@ class _QuickActions extends StatelessWidget {
 class _SectionHeader extends StatelessWidget {
   final String title;
   final int count;
-  const _SectionHeader({required this.title, required this.count});
+  final String? filterType;
+  final ValueChanged<String?> onFilterChange;
+  const _SectionHeader({
+    required this.title,
+    required this.count,
+    required this.filterType,
+    required this.onFilterChange,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-            letterSpacing: -0.2,
-          ),
-        ),
-        const SizedBox(width: 8),
-        if (count > 0)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              '$count',
+        Row(
+          children: [
+            Text(
+              title,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 17,
                 fontWeight: FontWeight.w700,
-                color: AppColors.primary,
+                color: AppColors.textPrimary,
+                letterSpacing: -0.2,
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (count > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$count',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        if (count > 0) ...[
+          const SizedBox(height: 8),
+          _FilterChips(selected: filterType, onSelect: onFilterChange),
+        ],
+      ],
+    );
+  }
+}
+
+class _FilterChips extends StatelessWidget {
+  final String? selected;
+  final ValueChanged<String?> onSelect;
+  const _FilterChips({required this.selected, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    final filters = [
+      (null, 'Tümü', AppColors.primary),
+      ('nakit', 'Nakit', AppColors.success),
+      ('kart', 'Kart', const Color(0xFF4A90D9)),
+      ('veresiye', 'Veresiye', AppColors.error),
+    ];
+    return Row(
+      children: filters.map((f) {
+        final (type, label, color) = f;
+        final isSelected = selected == type;
+        return Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: GestureDetector(
+            onTap: () => onSelect(type),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(
+                color: isSelected ? color : color.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: isSelected ? color : color.withOpacity(0.2)),
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? Colors.white : color,
+                ),
               ),
             ),
           ),
-      ],
+        );
+      }).toList(),
     );
   }
 }

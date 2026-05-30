@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
@@ -99,6 +100,27 @@ class CustomerDetailScreen extends ConsumerWidget {
                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
                     ),
                   ),
+                const Spacer(),
+                if (events.isNotEmpty)
+                  GestureDetector(
+                    onTap: () => _shareStatement(customer.name, customer.totalDebt, events),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.share_rounded, size: 13, color: AppColors.primary),
+                          SizedBox(width: 4),
+                          Text('Hesap Özeti', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                        ],
+                      ),
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 10),
@@ -147,6 +169,30 @@ class CustomerDetailScreen extends ConsumerWidget {
       Uri.parse('https://wa.me/$formatted?text=$msg'),
       mode: LaunchMode.externalApplication,
     );
+  }
+
+  void _shareStatement(String name, double totalDebt, List<_Event> events) {
+    final businessName = HiveService.settingsBox.get('businessName', defaultValue: '') as String;
+    final header = businessName.isNotEmpty ? businessName : 'EsnafCep';
+    final lines = <String>[
+      '📋 HESAP ÖZETİ — $header',
+      '─────────────────────',
+      'Müşteri: $name',
+      'Tarih: ${DateFormatter.format(DateTime.now())}',
+      '─────────────────────',
+    ];
+    for (final e in events.take(15)) {
+      final sign = e.type == 'payment' ? '✅ -' : '🔴 +';
+      final label = e.type == 'payment' ? 'Ödeme' : 'Borç';
+      final note = e.note != null && e.note!.isNotEmpty ? ' (${e.note})' : '';
+      lines.add('$sign${CurrencyFormatter.format(e.amount)}  $label$note  ${DateFormatter.formatShort(e.timestamp)}');
+    }
+    if (events.length > 15) lines.add('... ve ${events.length - 15} işlem daha');
+    lines.addAll([
+      '─────────────────────',
+      'Toplam Borç: ${CurrencyFormatter.format(totalDebt)}',
+    ]);
+    Share.share(lines.join('\n'), subject: '$name Hesap Özeti');
   }
 }
 
