@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/backup_service.dart';
 import '../../../data/local/hive_service.dart';
 import 'widgets/products_section.dart';
 
@@ -146,6 +147,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const SizedBox(height: 24),
             const ProductsSection(),
             const SizedBox(height: 24),
+            const _SectionLabel(text: 'Veri Yönetimi'),
+            const SizedBox(height: 12),
+            _SettingsCard(
+              child: Column(
+                children: [
+                  _TapRow(
+                    icon: Icons.upload_rounded,
+                    label: 'Verileri Dışa Aktar',
+                    sublabel: BackupService.buildSummary(),
+                    color: AppColors.primary,
+                    onTap: () async {
+                      try {
+                        await BackupService.exportData();
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Hata: $e'),
+                              backgroundColor: AppColors.error,
+                              behavior: SnackBarBehavior.floating,
+                              margin: const EdgeInsets.all(16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
             const _SectionLabel(text: 'Uygulama Hakkında'),
             const SizedBox(height: 12),
             _SettingsCard(
@@ -240,9 +273,10 @@ class _FieldRow extends StatelessWidget {
 class _TapRow extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String? sublabel;
   final Color color;
   final VoidCallback onTap;
-  const _TapRow({required this.icon, required this.label, required this.color, required this.onTap});
+  const _TapRow({required this.icon, required this.label, this.sublabel, required this.color, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -255,8 +289,16 @@ class _TapRow extends StatelessWidget {
           children: [
             Icon(icon, size: 18, color: color),
             const SizedBox(width: 12),
-            Text(label, style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.w600)),
-            const Spacer(),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.w600)),
+                  if (sublabel != null)
+                    Text(sublabel!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                ],
+              ),
+            ),
             Icon(Icons.chevron_right_rounded, size: 18, color: color.withOpacity(0.5)),
           ],
         ),

@@ -19,11 +19,15 @@ class Customer extends HiveObject {
   @HiveField(4)
   final DateTime createdAt;
 
+  @HiveField(5)
+  DateTime? lastDebtAt;
+
   Customer({
     required this.id,
     required this.name,
     this.phone,
     this.totalDebt = 0.0,
     required this.createdAt,
+    this.lastDebtAt,
   });
 }

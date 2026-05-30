@@ -17,6 +17,9 @@ class CustomerListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasDebt = customer.totalDebt > 0;
+    final debtAge = _debtAgeDays();
+    final riskColor = _riskColor(hasDebt, debtAge);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -25,11 +28,15 @@ class CustomerListTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(
+            color: hasDebt && debtAge != null && debtAge > 30
+                ? AppColors.error.withOpacity(0.3)
+                : AppColors.border,
+          ),
         ),
         child: Row(
           children: [
-            _Avatar(name: customer.name),
+            _Avatar(name: customer.name, color: riskColor),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -44,14 +51,14 @@ class CustomerListTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  if (customer.phone != null)
-                    Text(
-                      customer.phone!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
+                  Text(
+                    _subtitle(hasDebt, debtAge),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: riskColor.withOpacity(0.8),
+                      fontWeight: FontWeight.w500,
                     ),
+                  ),
                 ],
               ),
             ),
@@ -63,18 +70,22 @@ class CustomerListTile extends StatelessWidget {
                   style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 15,
-                    color: hasDebt ? AppColors.error : AppColors.success,
+                    color: hasDebt ? riskColor : AppColors.success,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  hasDebt ? 'borçlu' : 'temiz',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: hasDebt ? AppColors.error.withOpacity(0.7) : AppColors.success.withOpacity(0.7),
-                    fontWeight: FontWeight.w500,
+                if (hasDebt && debtAge != null && debtAge > 7)
+                  Container(
+                    margin: const EdgeInsets.only(top: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: riskColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      _ageBadge(debtAge),
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: riskColor),
+                    ),
                   ),
-                ),
               ],
             ),
             if (customer.phone != null) ...[
@@ -97,11 +108,39 @@ class CustomerListTile extends StatelessWidget {
       ),
     );
   }
+
+  int? _debtAgeDays() {
+    if (!customer.totalDebt.isFinite || customer.totalDebt <= 0) return null;
+    final ref = customer.lastDebtAt ?? customer.createdAt;
+    return DateTime.now().difference(ref).inDays;
+  }
+
+  Color _riskColor(bool hasDebt, int? days) {
+    if (!hasDebt) return AppColors.success;
+    if (days == null || days <= 7) return AppColors.error;
+    if (days <= 30) return const Color(0xFFE08A00);
+    return AppColors.error;
+  }
+
+  String _subtitle(bool hasDebt, int? days) {
+    if (!hasDebt) return 'Borç yok ✓';
+    if (days == null || days == 0) return 'Bugün borçlandı';
+    if (days == 1) return 'Dün borçlandı';
+    if (days <= 7) return '$days gündür bekliyor';
+    if (days <= 30) return '$days gündür ödeme yok ⚠️';
+    return '$days gündür ödeme yok 🔴';
+  }
+
+  String _ageBadge(int days) {
+    if (days <= 30) return '${days}g';
+    return '${days}g!';
+  }
 }
 
 class _Avatar extends StatelessWidget {
   final String name;
-  const _Avatar({required this.name});
+  final Color color;
+  const _Avatar({required this.name, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -112,8 +151,8 @@ class _Avatar extends StatelessWidget {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryLight],
+        gradient: LinearGradient(
+          colors: [color, color.withOpacity(0.7)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),

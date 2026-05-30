@@ -41,6 +41,7 @@ class CustomersNotifier extends StateNotifier<List<Customer>> {
     final customer = _repo.getCustomer(customerId);
     if (customer == null) return;
     customer.totalDebt += amount;
+    customer.lastDebtAt = DateTime.now();
     _repo.updateCustomer(customer);
     state = _repo.getAllCustomers();
   }
