@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/models/sale.dart';
+import '../../../data/models/customer.dart';
 import '../../../providers/sale_provider.dart';
 import '../../../providers/customer_provider.dart';
+import '../../../providers/expense_provider.dart';
 import '../../widgets/big_button.dart';
 import 'widgets/new_sale_dialog.dart';
 import 'widgets/cash_adjust_dialog.dart';
@@ -16,20 +19,36 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final salesNotifier = ref.watch(salesProvider.notifier);
+    final expensesNotifier = ref.watch(expensesProvider.notifier);
+    final customers = ref.watch(customersProvider);
     final stats = salesNotifier.todayStats;
     final todaySales = salesNotifier.todaySales;
+    final todayExpenses = expensesNotifier.todayTotal;
+
+    // Customers with debt overdue > 30 days
+    final now = DateTime.now();
+    final criticalDebtors = customers.where((c) {
+      if (c.totalDebt <= 0) return false;
+      final ref = c.lastDebtAt ?? c.createdAt;
+      return now.difference(ref).inDays > 30;
+    }).toList()
+      ..sort((a, b) => b.totalDebt.compareTo(a.totalDebt));
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          _AppBar(stats: stats),
+          _AppBar(stats: stats, todayExpenses: todayExpenses),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Column(
                 children: [
                   _QuickActions(ref: ref),
+                  if (criticalDebtors.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    _CriticalDebtorsCard(debtors: criticalDebtors),
+                  ],
                   const SizedBox(height: 24),
                   _SectionHeader(
                     title: 'Bugünkü Satışlar',
@@ -66,19 +85,20 @@ class HomeScreen extends ConsumerWidget {
 
 class _AppBar extends StatelessWidget {
   final Map<String, double> stats;
-  const _AppBar({required this.stats});
+  final double todayExpenses;
+  const _AppBar({required this.stats, required this.todayExpenses});
 
   @override
   Widget build(BuildContext context) {
     return SliverAppBar(
-      expandedHeight: 220,
+      expandedHeight: 230,
       pinned: true,
       backgroundColor: AppColors.background,
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.pin,
         background: Container(
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: _SummaryCard(stats: stats),
+          child: _SummaryCard(stats: stats, todayExpenses: todayExpenses),
         ),
       ),
       title: const Text('EsnafCep'),
@@ -89,7 +109,8 @@ class _AppBar extends StatelessWidget {
 
 class _SummaryCard extends StatelessWidget {
   final Map<String, double> stats;
-  const _SummaryCard({required this.stats});
+  final double todayExpenses;
+  const _SummaryCard({required this.stats, required this.todayExpenses});
 
   @override
   Widget build(BuildContext context) {
@@ -154,9 +175,26 @@ class _SummaryCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            'Toplam Kasa',
-            style: TextStyle(color: Colors.white.withOpacity(0.65), fontSize: 12),
+          Row(
+            children: [
+              Text(
+                'Toplam Gelir',
+                style: TextStyle(color: Colors.white.withOpacity(0.65), fontSize: 12),
+              ),
+              const SizedBox(width: 8),
+              if (todayExpenses > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Net: ${CurrencyFormatter.format((stats['toplam'] ?? 0) - todayExpenses)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 16),
           Row(
@@ -206,6 +244,129 @@ class _StatPill extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CriticalDebtorsCard extends StatelessWidget {
+  final List<Customer> debtors;
+  const _CriticalDebtorsCard({required this.debtors});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.error.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.error.withOpacity(0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+            child: Row(
+              children: [
+                Container(
+                  width: 28, height: 28,
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 16),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${debtors.length} Kritik Borçlu',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                    color: AppColors.error,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '30+ gündür ödeme yok',
+                  style: TextStyle(fontSize: 11, color: AppColors.error.withOpacity(0.7)),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, indent: 14, endIndent: 14),
+          ...debtors.take(3).map((c) => _CriticalRow(customer: c)),
+          if (debtors.length > 3)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
+              child: Text(
+                '+${debtors.length - 3} müşteri daha — Veresiye sekmesine bak',
+                style: TextStyle(fontSize: 11, color: AppColors.error.withOpacity(0.7)),
+              ),
+            )
+          else
+            const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+}
+
+class _CriticalRow extends StatelessWidget {
+  final Customer customer;
+  const _CriticalRow({required this.customer});
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final ref = customer.lastDebtAt ?? customer.createdAt;
+    final days = now.difference(ref).inDays;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(customer.name,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textPrimary)),
+                Text('$days gündür ödeme yok',
+                    style: TextStyle(fontSize: 11, color: AppColors.error.withOpacity(0.8))),
+              ],
+            ),
+          ),
+          Text(
+            CurrencyFormatter.format(customer.totalDebt),
+            style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.error, fontSize: 14),
+          ),
+          if (customer.phone != null) ...[
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () {
+                final phone = customer.phone!
+                    .replaceAll(' ', '')
+                    .replaceAll('-', '')
+                    .replaceFirst(RegExp(r'^0'), '+90');
+                final msg = Uri.encodeComponent(
+                  'Merhaba ${customer.name} 👋\n\nToplam borcunuz: *${CurrencyFormatter.format(customer.totalDebt)}*\n\nÖdeme yapabilirseniz seviniriz. 🙏',
+                );
+                launchUrl(
+                  Uri.parse('https://wa.me/$phone?text=$msg'),
+                  mode: LaunchMode.externalApplication,
+                );
+              },
+              child: Container(
+                width: 32, height: 32,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF25D366).withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.message_rounded, color: Color(0xFF25D366), size: 16),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
