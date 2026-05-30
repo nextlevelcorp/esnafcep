@@ -13,6 +13,7 @@ import '../../../providers/customer_provider.dart';
 import '../../../providers/expense_provider.dart';
 import '../../widgets/big_button.dart';
 import '../sales_history/sales_history_screen.dart';
+import 'widgets/cart_sale_dialog.dart';
 import 'widgets/new_sale_dialog.dart';
 import 'widgets/cash_adjust_dialog.dart';
 
@@ -440,15 +441,35 @@ class _QuickActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        BigButton(
-          label: 'Yeni Satış',
-          icon: Icons.add_rounded,
-          height: 58,
-          onPressed: () => showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            builder: (_) => NewSaleDialog(ref: ref),
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: BigButton(
+                label: 'Yeni Satış',
+                icon: Icons.add_rounded,
+                height: 58,
+                onPressed: () => showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => NewSaleDialog(ref: ref),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: BigButton(
+                label: 'Sepet',
+                icon: Icons.shopping_cart_rounded,
+                height: 58,
+                isPrimary: false,
+                onPressed: () => showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => CartSaleDialog(ref: ref),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 10),
         Row(
