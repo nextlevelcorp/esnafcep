@@ -224,7 +224,7 @@ class _NetCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isProfit
-              ? [const AppColors.primary, const AppColors.primaryLight]
+              ? [AppColors.primary, AppColors.primaryLight]
               : [const Color(0xFFE05C3A), const Color(0xFFFF7B5A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,

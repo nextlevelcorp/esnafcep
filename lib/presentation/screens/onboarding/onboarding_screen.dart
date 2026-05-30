@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
-import '../../data/local/hive_service.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../data/local/hive_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
   final VoidCallback onDone;

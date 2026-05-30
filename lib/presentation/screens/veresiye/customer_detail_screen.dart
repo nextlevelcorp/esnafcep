@@ -159,7 +159,7 @@ class CustomerDetailScreen extends ConsumerWidget {
         .replaceAll('-', '')
         .replaceFirst(RegExp(r'^0'), '+90');
     final businessName = HiveService.settingsBox.get('businessName', defaultValue: '') as String;
-    final senderLine = businessName.isNotEmpty ? '\n_$businessName_' : '\n_EsnafCep_';
+    final senderLine = businessName.isNotEmpty ? '\n_${businessName}_' : '\n_EsnafCep_';
     final msg = Uri.encodeComponent(
       'Merhaba $name 👋\n\n'
       'Toplam borcunuz: *${CurrencyFormatter.format(debt)}*\n\n'
@@ -224,7 +224,7 @@ class _DebtCard extends StatelessWidget {
             gradient: LinearGradient(
               colors: hasDebt
                   ? [const Color(0xFFE05C3A), const Color(0xFFFF7B5A)]
-                  : [const AppColors.primary, const AppColors.primaryLight],
+                  : [AppColors.primary, AppColors.primaryLight],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
